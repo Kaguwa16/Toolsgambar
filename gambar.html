@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="id" class="h-full bg-slate-950 text-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StoryCanvas - AI Story Image Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0f5ff',
+                            100: '#e0ebff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            900: '#1e1b4b',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(99, 102, 241, 0.4);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(99, 102, 241, 0.7);
+        }
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+    </style>
+</head>
+<body class="h-full flex flex-col font-sans antialiased bg-slate-950 text-slate-100 overflow-x-hidden">
+
+    <header class="border-b border-slate-800/80 bg-slate-900/80 backdrop-blur-md sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 flex items-center justify-center shadow-lg shadow-indigo-500/30">
+                    <i class="fa-solid font-bold fa-book-open-reader text-white text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold bg-gradient-to-r from-white via-slate-200 to-indigo-300 bg-clip-text text-transparent">StoryCanvas AI</h1>
+                    <p class="text-xs text-slate-400">Generator Gambar Berorientasi Cerita & Adegan</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center space-x-3">
+                <button id="btnResetAll" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-lg border border-slate-700 transition flex items-center gap-1.5" title="Mulai Sesi Baru / Reset Total">
+                    <i class="fa-solid fa-arrows-rotate text-indigo-400"></i>
+                    <span>Reset Sesi Baru</span>
+                </button>
+                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1.5 animate-pulse"></span>
+                    Locked Session Active
+                </span>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- Left Column: Story Input & Scene Management (5 Cols) -->
+        <section class="lg:col-span-5 flex flex-col space-y-6">
+            
+            <!-- Story Creator Box -->
+            <div class="glass-panel rounded-2xl p-5 shadow-xl">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-base font-semibold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-wand-magic-sparkles text-indigo-400"></i>
+                        Penyusun Cerita & Adegan (Mode Mikro)
+                    </h2>
+                    <span class="text-xs text-slate-400">Target ~100 Karakter/Adegan</span>
+                </div>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Judul Cerita / Tema</label>
+                        <input type="text" id="storyTitle" placeholder="Misal: Petualangan Ksatria di Hutan Kristal" 
+                            class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-300 mb-1">Gaya Visual (Terkunci Sesi)</label>
+                            <select id="artStyle" class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+                                <option value="3D Digital Art Render, Unreal Engine 5 style, cinematic lighting">3D Render Cinematic</option>
+                                <option value="Anime aesthetic, highly detailed Studio Ghibli style background">Anime / Ghibli Style</option>
+                                <option value="Epic fantasy oil painting, textured brush strokes, moody lighting">Lukisan Minyak Fantasi</option>
+                                <option value="Cyberpunk neon aesthetic, futuristic atmosphere, octane render">Cyberpunk Sci-Fi</option>
+                                <option value="Photorealistic high resolution photograph, dramatic natural lighting">Fotorealistik</option>
+                                <option value="Storybook illustration, vibrant watercolor art style">Ilustrasi Buku Dongeng</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-300 mb-1">Rasio Gambar</label>
+                            <select id="aspectRatio" class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+                                <option value="16:9">16:9 (Landscape Standard)</option>
+                                <option value="1:1">1:1 (Persegi / Square)</option>
+                                <option value="9:16">9:16 (Potret / Mobile)</option>
+                                <option value="4:3">4:3 (Klasik Screen)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Toggle Konsistensi Visual Berantai -->
+                    <div class="bg-indigo-950/40 border border-indigo-500/30 rounded-xl p-3 flex items-center justify-between">
+                        <div class="pr-2">
+                            <span class="block text-xs font-semibold text-indigo-200 flex items-center gap-1.5">
+                                <i class="fa-solid fa-link text-indigo-400"></i>
+                                Konsistensi Berantai & Tetap Sesi
+                            </span>
+                            <span class="block text-[10px] text-slate-400">Latar & spesifikasi tokoh dikunci ketat selama sesi aktif</span>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                            <input type="checkbox" id="chkContinuity" class="sr-only peer" checked disabled>
+                            <div class="w-9 h-5 bg-indigo-900 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600 opacity-90"></div>
+                        </label>
+                    </div>
+
+                    <!-- Input Spesifikasi Karakter -->
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="block text-xs font-medium text-slate-300">Spesifikasi & Ciri Karakter (Terkunci Sesi)</label>
+                            <span class="text-[10px] text-emerald-400 font-medium"><i class="fa-solid fa-lock mr-1"></i>Terkunci Aman</span>
+                        </div>
+                        <textarea id="characterSpecs" rows="2" placeholder="Misal: Kaelen (Pemuda 18 tahun, rambut perak pendek, mata biru, rompi kulit cokelat), Skywing (Anak naga bersisik kristal biru transparan)"
+                            class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl p-2.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition resize-none"></textarea>
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="block text-xs font-medium text-slate-300">Naskah atau Ringkasan Cerita</label>
+                            <button type="button" id="btnPresetStory" class="text-[11px] text-indigo-400 hover:text-indigo-300 underline">Gunakan Contoh Cerita</button>
+                        </div>
+                        <textarea id="storyContent" rows="4" placeholder="Tuliskan cerita Anda. AI akan memecahnya menjadi banyak segmen mikro (~100 karakter per adegan)..."
+                            class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl p-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition resize-none"></textarea>
+                    </div>
+
+                    <button id="btnGenerateStory" type="button" class="w-full py-3 px-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-sm font-semibold rounded-xl shadow-lg shadow-indigo-600/30 flex items-center justify-center space-x-2 transition transform active:scale-[0.99]">
+                        <i class="fa-solid fa-scissors"></i>
+                        <span>Pecah Cerita Menjadi Banyak Adegan (~100 Karakter)</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Scenes List Container -->
+            <div class="glass-panel rounded-2xl p-5 shadow-xl flex-1 flex flex-col min-h-[300px]">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-sm font-semibold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-film text-purple-400"></i>
+                        Daftar Segmen Adegan (<span id="sceneCount">0</span>)
+                    </h3>
+                    <button id="btnGenerateAllImages" disabled class="px-3 py-1.5 bg-indigo-600/50 text-slate-300 text-xs font-medium rounded-lg hover:bg-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-image"></i>
+                        <span>Generate Semua Gambar</span>
+                    </button>
+                </div>
+
+                <!-- Scene Items Scroll List -->
+                <div id="scenesContainer" class="space-y-3 flex-1 overflow-y-auto max-h-[420px] pr-1">
+                    <div class="text-center py-12 px-4 border-2 border-dashed border-slate-800 rounded-xl">
+                        <i class="fa-solid fa-clapperboard text-3xl text-slate-600 mb-2"></i>
+                        <p class="text-xs text-slate-400">Belum ada adegan. Masukkan cerita lalu klik tombol pemecah mikro di atas.</p>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- Right Column: Image Preview, Dropdown Selector & Download Studio (7 Cols) -->
+        <section class="lg:col-span-7 flex flex-col space-y-6">
+
+            <!-- Active Output Showcase Box -->
+            <div class="glass-panel rounded-2xl p-5 shadow-xl flex flex-col h-full">
+                
+                <!-- Controls & Dropdown Selector Header -->
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-800">
+                    <div>
+                        <h2 class="text-base font-semibold text-white flex items-center gap-2">
+                            <i class="fa-solid fa-photo-film text-pink-400"></i>
+                            Studio Visual Cerita
+                        </h2>
+                        <p class="text-xs text-slate-400">Pilih dari banyak gambar adegan mikro dan unduh dalam format JPG</p>
+                    </div>
+
+                    <!-- Dropdown for selecting generated images -->
+                    <div class="min-w-[220px]">
+                        <label for="imageSelectDropdown" class="block text-[11px] font-medium text-indigo-300 mb-1">
+                            <i class="fa-solid fa-layer-group mr-1"></i>Pilih Gambar Terhasilkan:
+                        </label>
+                        <select id="imageSelectDropdown" disabled class="w-full bg-slate-900 border border-indigo-500/40 rounded-xl px-3 py-2 text-xs font-medium text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                            <option value="">-- Belum ada gambar dihasilkan --</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Main Image Preview Viewer -->
+                <div class="relative flex-1 min-h-[380px] bg-slate-900/80 rounded-2xl border border-slate-800/80 my-4 flex items-center justify-center overflow-hidden group">
+                    
+                    <!-- Loading Overlay -->
+                    <div id="imageLoadingSpinner" class="hidden absolute inset-0 bg-slate-950/80 backdrop-blur-sm z-20 flex flex-col items-center justify-center p-6 text-center">
+                        <div class="w-14 h-14 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin mb-4"></div>
+                        <h4 class="text-sm font-semibold text-white mb-1" id="loadingText">Sedang Memproses Gambar...</h4>
+                        <p class="text-xs text-slate-400 max-w-xs" id="loadingSubtext">AI sedang melukis visual segmen mikro sesuai kontinuitas cerita.</p>
+                    </div>
+
+                    <!-- Default Placeholder state -->
+                    <div id="imagePlaceholder" class="text-center p-8">
+                        <div class="w-20 h-20 rounded-full bg-slate-800/80 flex items-center justify-center mx-auto mb-4 text-slate-600 border border-slate-700/50">
+                            <i class="fa-regular fa-image text-4xl"></i>
+                        </div>
+                        <h3 class="text-sm font-medium text-slate-300 mb-1">Gambar Terpilih Akan Tampil Di Sini</h3>
+                        <p class="text-xs text-slate-500 max-w-sm mx-auto">
+                            Klik tombol "Generate Gambar" pada salah satu adegan mikro untuk mulai menghasilkan ilustrasi cerita.
+                        </p>
+                    </div>
+
+                    <!-- Main Rendered Image HTML Element -->
+                    <img id="mainImageDisplay" src="" alt="Cerita Visual" class="hidden max-h-[500px] w-full object-contain rounded-xl transition duration-300">
+                    
+                    <!-- Image Badge Tag -->
+                    <div id="imageBadge" class="hidden absolute top-3 left-3 bg-slate-950/70 border border-slate-700/80 backdrop-blur-md px-3 py-1 rounded-full text-[11px] text-slate-200 font-medium">
+                        <i class="fa-solid fa-sparkles text-amber-400 mr-1.5"></i>
+                        <span id="imageBadgeText">Adegan 1</span>
+                    </div>
+                </div>
+
+                <!-- Active Scene Info & Action Bar -->
+                <div class="space-y-4 pt-2">
+                    <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-400" id="currentSceneTag">Adegan Aktif</span>
+                                <h4 class="text-sm font-semibold text-white mt-0.5" id="currentSceneTitle">Pilih adegan untuk melihat deskripsi</h4>
+                            </div>
+                            <span class="text-[10px] px-2 py-0.5 bg-slate-800 rounded text-slate-400" id="imageRatioTag">16:9</span>
+                        </div>
+                        <p class="text-xs text-slate-300 mt-2 leading-relaxed" id="currentSceneDesc">
+                            Deskripsi segmen cerita akan muncul di sini beserta petunjuk visual (*prompt*) yang dikirimkan ke model AI.
+                        </p>
+                    </div>
+
+                    <!-- Primary Action Buttons (Download JPG, Regenerate) -->
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <div class="flex items-center space-x-2">
+                            <button id="btnRegenerateCurrent" disabled class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center space-x-1.5">
+                                <i class="fa-solid fa-rotate text-indigo-400"></i>
+                                <span>Buat Variasi Baru</span>
+                            </button>
+                        </div>
+
+                        <!-- Mandatory JPG Download Button -->
+                        <button id="btnDownloadJPG" disabled class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-emerald-600/30 disabled:opacity-40 disabled:cursor-not-allowed transition transform active:scale-95 flex items-center space-x-2">
+                            <i class="fa-solid fa-download text-sm"></i>
+                            <span>Unduh Gambar (.JPG)</span>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+    <script>
+        const appState = {
+            apiKey: "",
+            title: "",
+            artStyle: "3D Digital Art Render, Unreal Engine 5 style, cinematic lighting",
+            aspectRatio: "16:9",
+            characterSpecs: "",
+            lockedSpecs: false,
+            scenes: [],
+            generatedImages: [],
+            activeImageId: null
+        };
+
+        const storyTitleInput = document.getElementById('storyTitle');
+        const artStyleSelect = document.getElementById('artStyle');
+        const aspectRatioSelect = document.getElementById('aspectRatio');
+        const characterSpecsInput = document.getElementById('characterSpecs');
+        const storyContentInput = document.getElementById('storyContent');
+        const btnGenerateStory = document.getElementById('btnGenerateStory');
+        const btnPresetStory = document.getElementById('btnPresetStory');
+        const btnResetAll = document.getElementById('btnResetAll');
+        const scenesContainer = document.getElementById('scenesContainer');
+        const sceneCountSpan = document.getElementById('sceneCount');
+        const btnGenerateAllImages = document.getElementById('btnGenerateAllImages');
+
+        const imageSelectDropdown = document.getElementById('imageSelectDropdown');
+        const mainImageDisplay = document.getElementById('mainImageDisplay');
+        const imagePlaceholder = document.getElementById('imagePlaceholder');
+        const imageLoadingSpinner = document.getElementById('imageLoadingSpinner');
+        const loadingText = document.getElementById('loadingText');
+        const loadingSubtext = document.getElementById('loadingSubtext');
+        const imageBadge = document.getElementById('imageBadge');
+        const imageBadgeText = document.getElementById('imageBadgeText');
+
+        const currentSceneTag = document.getElementById('currentSceneTag');
+        const currentSceneTitle = document.getElementById('currentSceneTitle');
+        const currentSceneDesc = document.getElementById('currentSceneDesc');
+        const imageRatioTag = document.getElementById('imageRatioTag');
+
+        const btnDownloadJPG = document.getElementById('btnDownloadJPG');
+        const btnRegenerateCurrent = document.getElementById('btnRegenerateCurrent');
+        const toastContainer = document.getElementById('toastContainer');
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/&/g, "&amp;")
+                      .replace(/</g, "&lt;")
+                      .replace(/>/g, "&gt;")
+                      .replace(/"/g, "&quot;")
+                      .replace(/'/g, "&#039;");
+        }
+
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `pointer-events-auto flex items-center space-x-2.5 px-4 py-3 rounded-xl shadow-xl text-xs font-medium text-white transition-all duration-300 transform translate-y-2 opacity-0 ${
+                type === 'success' ? 'bg-emerald-600' :
+                type === 'error' ? 'bg-rose-600' : 'bg-indigo-600'
+            }`;
+            
+            const icon = type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-triangle' : 'fa-info-circle';
+            toast.innerHTML = `<i class="fa-solid ${icon} text-sm"></i><span>${message}</span>`;
+            
+            toastContainer.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
+        btnResetAll.addEventListener('click', () => {
+            if (confirm("Mulai sesi baru akan menghapus cerita, karakter, dan gambar saat ini. Lanjutkan?")) {
+                appState.title = "";
+                appState.characterSpecs = "";
+                appState.lockedSpecs = false;
+                appState.scenes = [];
+                appState.generatedImages = [];
+                appState.activeImageId = null;
+
+                storyTitleInput.value = "";
+                storyContentInput.value = "";
+                characterSpecsInput.value = "";
+                characterSpecsInput.disabled = false;
+                artStyleSelect.disabled = false;
+
+                mainImageDisplay.src = "";
+                mainImageDisplay.classList.add('hidden');
+                imagePlaceholder.classList.remove('hidden');
+                imageBadge.classList.add('hidden');
+
+                currentSceneTitle.textContent = "Pilih adegan untuk melihat deskripsi";
+                currentSceneDesc.textContent = "Deskripsi segmen cerita akan muncul di sini beserta petunjuk visual (*prompt*) yang dikirimkan ke model AI.";
+                
+                btnDownloadJPG.disabled = true;
+                btnRegenerateCurrent.disabled = true;
+                btnGenerateAllImages.disabled = true;
+
+                updateDropdownMenu();
+                renderSceneCards();
+                showToast("Sesi baru dimulai! Latar dan spesifikasi karakter kini bersih.", "info");
+            }
+        });
+
+        btnPresetStory.addEventListener('click', () => {
+            storyTitleInput.value = "Petualangan Kaelen & naga Kristal Skywing";
+            characterSpecsInput.value = "Kaelen: Pemuda 18 tahun, rambut perak ikal pendek, mata biru bersinar, memakai rompi kulit cokelat dan syal merah. Naga Skywing: Anak naga kecil bersisik kristal biru transparan, sayap bercahaya gading.";
+            storyContentInput.value = `Di sebuah kerajaan melayang bernama Aetheria, seorang penjelajah muda bernama Kaelen menemukan sebuah gua kuno yang memancarkan cahaya biru terang. Di dalam gua tersebut, Kaelen bertemu dengan Skywing, seekor anak naga bernapas kristal yang terluka akibat jebakan pemburu. Kaelen dengan lembut membalut luka naga itu menggunakan kain hangat miliknya. Sebagai rasa terima kasih, Skywing mengajak Kaelen terbang bersama melintasi awan keemasan saat matahari terbenam. Mereka terbang menembus langit senja hingga menemukan kota mitos yang tersembunyi di balik badai petir besar.`;
+            showToast("Contoh cerita mikro berhasil dimuat!", "info");
+        });
+
+        async function fetchGeminiWithBackoff(url, options, maxRetries = 3) {
+            let delay = 1000;
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    const res = await fetch(url, options);
+                    if (res.ok) {
+                        return await res.json();
+                    }
+                    if (res.status === 429 || res.status >= 500) {
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        delay *= 2;
+                        continue;
+                    }
+                    const errBody = await res.text();
+                    throw new Error(`API Error [${res.status}]: ${errBody}`);
+                } catch (err) {
+                    if (i === maxRetries - 1) throw err;
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    delay *= 2;
+                }
+            }
+        }
+
+        btnGenerateStory.addEventListener('click', async () => {
+            const rawStory = storyContentInput.value.trim();
+            const title = storyTitleInput.value.trim() || "Cerita Tanpa Judul";
+            const characterSpecs = characterSpecsInput.value.trim();
+
+            if (!rawStory) {
+                showToast("Silakan masukkan teks cerita terlebih dahulu!", "error");
+                return;
+            }
+
+            appState.title = title;
+            appState.artStyle = artStyleSelect.value;
+            appState.aspectRatio = aspectRatioSelect.value;
+            appState.characterSpecs = characterSpecs;
+            appState.lockedSpecs = true;
+
+            characterSpecsInput.disabled = true;
+            artStyleSelect.disabled = true;
+
+            btnGenerateStory.disabled = true;
+            btnGenerateStory.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i><span>Memecah Cerita Menjadi Segmen Mikro (~100 Karakter)...</span>`;
+
+            try {
+                const systemPrompt = "Anda adalah sutradara storyboard profesional. Tugas Anda adalah memecah naskah cerita pengguna menjadi BANYAK segmen adegan mikro. Setiap segmen cerita naratifnya harus pendek sekitar 100 karakter saja (ringkas dan padat aksi per kalimat/adegan). Untuk setiap segmen, buatkan sceneNumber, sceneTitle pendek, narasi pendek (~100 karakter), dan visualPrompt mendalam dalam Bahasa Inggris (mencakup pencahayaan, posisi, latar belakang, dan detail fisik karakter agar tetap konsisten). Buat sebanyak mungkin adegan yang diperlukan agar cerita terurai dengan detail.";
+
+                let userPrompt = `Judul Cerita: "${title}".\nGaya Seni (STRICT LOCK): ${appState.artStyle}.\n`;
+                if (characterSpecs) {
+                    userPrompt += `Spesifikasi Karakter & Latar Konsisten (STRICT LOCK - Tidak boleh berubah di semua adegan): ${characterSpecs}\n`;
+                }
+                userPrompt += `\nNaskah Cerita:\n${rawStory}`;
+
+                const payload = {
+                    contents: [{ parts: [{ text: userPrompt }] }],
+                    systemInstruction: { parts: [{ text: systemPrompt }] },
+                    generationConfig: {
+                        responseMimeType: "application/json",
+                        responseSchema: {
+                            type: "OBJECT",
+                            properties: {
+                                scenes: {
+                                    type: "ARRAY",
+                                    items: {
+                                        type: "OBJECT",
+                                        properties: {
+                                            sceneNumber: { type: "INTEGER" },
+                                            sceneTitle: { type: "STRING" },
+                                            narrative: { type: "STRING" },
+                                            visualPrompt: { type: "STRING" }
+                                        },
+                                        required: ["sceneNumber", "sceneTitle", "narrative", "visualPrompt"]
+                                    }
+                                }
+                            },
+                            required: ["scenes"]
+                        }
+                    }
+                };
+
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${appState.apiKey}`;
+                const responseData = await fetchGeminiWithBackoff(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const jsonText = responseData.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (!jsonText) throw new Error("Format respon adegan mikro tidak valid dari API.");
+
+                const parsed = JSON.parse(jsonText);
+                appState.scenes = parsed.scenes || [];
+
+                renderSceneCards();
+                btnGenerateAllImages.disabled = appState.scenes.length === 0;
+                showToast(`Berhasil mengunci sesi dan memecah cerita menjadi ${appState.scenes.length} segmen mikro!`, "success");
+
+            } catch (error) {
+                console.error("Gagal memecah cerita mikro:", error);
+                showToast("Gagal memecah cerita. Silakan coba lagi.", "error");
+            } finally {
+                btnGenerateStory.disabled = false;
+                btnGenerateStory.innerHTML = `<i class="fa-solid fa-scissors"></i><span>Pecah Cerita Menjadi Banyak Adegan (~100 Karakter)</span>`;
+            }
+        });
+
+        function renderSceneCards() {
+            sceneCountSpan.textContent = appState.scenes.length;
+            scenesContainer.innerHTML = '';
+
+            if (appState.scenes.length === 0) {
+                scenesContainer.innerHTML = `
+                    <div class="text-center py-12 px-4 border-2 border-dashed border-slate-800 rounded-xl">
+                        <i class="fa-solid fa-clapperboard text-3xl text-slate-600 mb-2"></i>
+                        <p class="text-xs text-slate-400">Belum ada adegan. Masukkan cerita di atas lalu klik tombol pemecah mikro.</p>
+                    </div>`;
+                return;
+            }
+
+            appState.scenes.forEach((scene, idx) => {
+                const card = document.createElement('div');
+                card.className = "bg-slate-900/90 border border-slate-800 hover:border-slate-700 rounded-xl p-3.5 transition flex flex-col justify-between space-y-3";
+                
+                const existingImg = appState.generatedImages.find(img => img.sceneIndex === idx);
+                const statusBadge = existingImg 
+                    ? `<span class="px-2 py-0.5 rounded text-[10px] bg-emerald-500/20 text-emerald-300 font-medium"><i class="fa-solid fa-check mr-1"></i>Selesai</span>`
+                    : `<span class="px-2 py-0.5 rounded text-[10px] bg-slate-800 text-slate-400 font-medium">Belum Digambar</span>`;
+
+                card.innerHTML = `
+                    <div class="flex items-start justify-between gap-2">
+                        <div>
+                            <span class="text-[10px] font-bold text-indigo-400 uppercase tracking-wide">Segmen #${scene.sceneNumber || (idx + 1)}</span>
+                            <h4 class="text-xs font-semibold text-white mt-0.5">${escapeHtml(scene.sceneTitle)}</h4>
+                        </div>
+                        ${statusBadge}
+                    </div>
+                    <p class="text-[11px] text-slate-300 line-clamp-2 leading-relaxed">${escapeHtml(scene.narrative)}</p>
+                    <div class="flex items-center justify-between pt-1 border-t border-slate-800/80">
+                        <button type="button" data-scene-idx="${idx}" class="btn-gen-single px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium rounded-lg transition flex items-center space-x-1.5">
+                            <i class="fa-solid fa-wand-magic-sparkles text-[10px]"></i>
+                            <span>${existingImg ? 'Buat Ulang' : 'Generate Gambar'}</span>
+                        </button>
+                        ${existingImg ? `<button type="button" data-img-id="${existingImg.id}" class="btn-view-img text-[11px] text-indigo-300 hover:underline">Lihat Hasil</button>` : ''}
+                    </div>
+                `;
+                scenesContainer.appendChild(card);
+            });
+
+            document.querySelectorAll('.btn-gen-single').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const sceneIdx = parseInt(e.currentTarget.getAttribute('data-scene-idx'), 10);
+                    generateImageForScene(sceneIdx);
+                });
+            });
+
+            document.querySelectorAll('.btn-view-img').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const imgId = e.currentTarget.getAttribute('data-img-id');
+                    setActiveDisplayImage(imgId);
+                });
+            });
+        }
+
+        async function generateImageForScene(sceneIndex) {
+            const scene = appState.scenes[sceneIndex];
+            if (!scene) return;
+
+            let fullVisualPrompt = `${scene.visualPrompt}`;
+            if (appState.characterSpecs) {
+                fullVisualPrompt += `, STRICT CHARACTER & ENVIRONMENT LOCK (Must remain identical across all scenes): (${appState.characterSpecs})`;
+            }
+            fullVisualPrompt += `, in strict locked story style: ${appState.artStyle}, flawless character consistency, unwavering background continuity, high detail, masterpiece`;
+
+            imageLoadingSpinner.classList.remove('hidden');
+            loadingText.textContent = `Menggambar Segmen #${scene.sceneNumber || (sceneIndex + 1)}...`;
+            loadingSubtext.textContent = `"${scene.sceneTitle}"`;
+
+            let prevImgObj = null;
+            if (appState.generatedImages.length > 0) {
+                prevImgObj = appState.generatedImages.find(img => img.sceneIndex === sceneIndex - 1) 
+                          || appState.generatedImages[appState.generatedImages.length - 1];
+            }
+
+            try {
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image:generateContent?key=${appState.apiKey}`;
+                
+                const parts = [];
+
+                if (prevImgObj && prevImgObj.base64Data) {
+                    parts.push({
+                        text: `STRICT CONTINUITY REFERENCE: Maintain absolute consistency for the background environment, lighting, and character appearance from this reference image:`
+                    });
+                    parts.push({
+                        inlineData: {
+                            mimeType: prevImgObj.mimeType || 'image/png',
+                            data: prevImgObj.base64Data
+                        }
+                    });
+                    parts.push({
+                        text: `Now render the next micro scene while preserving the exact character and background theme: ${fullVisualPrompt}`
+                    });
+                } else {
+                    parts.push({ text: fullVisualPrompt });
+                }
+
+                const payload = {
+                    contents: [{
+                        role: 'user',
+                        parts: parts
+                    }],
+                    generationConfig: {
+                        responseModalities: ['IMAGE'],
+                        imageConfig: {
+                            aspectRatio: appState.aspectRatio || "16:9"
+                        }
+                    }
+                };
+
+                const result = await fetchGeminiWithBackoff(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const candidateParts = result?.candidates?.[0]?.content?.parts || [];
+                const imgPart = candidateParts.find(p => p.inlineData && p.inlineData.data) || candidateParts.find(p => p.inline_data && p.inline_data.data);
+                
+                const inlineData = imgPart ? (imgPart.inlineData || imgPart.inline_data) : null;
+
+                if (!inlineData || !inlineData.data) {
+                    throw new Error("Respon API tidak memiliki data gambar yang valid.");
+                }
+
+                const mimeType = inlineData.mimeType || inlineData.mime_type || 'image/png';
+                const base64Data = inlineData.data;
+                const dataUrl = `data:${mimeType};base64,${base64Data}`;
+
+                appState.generatedImages = appState.generatedImages.filter(img => img.sceneIndex !== sceneIndex);
+
+                const newImgObj = {
+                    id: 'img_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+                    sceneIndex: sceneIndex,
+                    sceneTitle: scene.sceneTitle,
+                    sceneNumber: scene.sceneNumber || (sceneIndex + 1),
+                    narrative: scene.narrative,
+                    visualPrompt: fullVisualPrompt,
+                    dataUrl: dataUrl,
+                    mimeType: mimeType,
+                    base64Data: base64Data,
+                    hasReference: !!prevImgObj,
+                    timestamp: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+                };
+
+                appState.generatedImages.push(newImgObj);
+                appState.generatedImages.sort((a, b) => a.sceneIndex - b.sceneIndex);
+                
+                updateDropdownMenu();
+                setActiveDisplayImage(newImgObj.id);
+                renderSceneCards();
+
+                showToast(`Gambar Segmen #${newImgObj.sceneNumber} berhasil dibuat dengan konsistensi sesi terkunci!`, "success");
+
+            } catch (error) {
+                console.error("Gagal menghasilkan gambar:", error);
+                showToast("Gagal menghasilkan gambar. Coba tekan tombol lagi.", "error");
+            } finally {
+                imageLoadingSpinner.classList.add('hidden');
+            }
+        }
+
+        btnGenerateAllImages.addEventListener('click', async () => {
+            if (appState.scenes.length === 0) return;
+
+            btnGenerateAllImages.disabled = true;
+            showToast(`Memulai pembuatan gambar berantai untuk ${appState.scenes.length} segmen mikro...`, "info");
+
+            for (let i = 0; i < appState.scenes.length; i++) {
+                await generateImageForScene(i);
+            }
+
+            btnGenerateAllImages.disabled = false;
+            showToast("Selesai menghasilkan seluruh gambar dengan konsistensi latar & tokoh terjaga!", "success");
+        });
+
+        function updateDropdownMenu() {
+            imageSelectDropdown.innerHTML = '';
+
+            if (appState.generatedImages.length === 0) {
+                imageSelectDropdown.disabled = true;
+                const opt = document.createElement('option');
+                opt.value = "";
+                opt.textContent = "-- Belum ada gambar dihasilkan --";
+                imageSelectDropdown.appendChild(opt);
+                return;
+            }
+
+            imageSelectDropdown.disabled = false;
+
+            appState.generatedImages.forEach((img) => {
+                const opt = document.createElement('option');
+                opt.value = img.id;
+                opt.textContent = `Segmen #${img.sceneNumber}: ${img.sceneTitle} (${img.timestamp})`;
+                imageSelectDropdown.appendChild(opt);
+            });
+        }
+
+        imageSelectDropdown.addEventListener('change', (e) => {
+            const selectedId = e.target.value;
+            if (selectedId) {
+                setActiveDisplayImage(selectedId);
+            }
+        });
+
+        function setActiveDisplayImage(imageId) {
+            const imgObj = appState.generatedImages.find(item => item.id === imageId);
+            if (!imgObj) return;
+
+            appState.activeImageId = imageId;
+            imageSelectDropdown.value = imageId;
+
+            imagePlaceholder.classList.add('hidden');
+            mainImageDisplay.classList.remove('hidden');
+            mainImageDisplay.src = imgObj.dataUrl;
+
+            imageBadge.classList.remove('hidden');
+            imageBadgeText.innerHTML = `Segmen #${imgObj.sceneNumber}: ${escapeHtml(imgObj.sceneTitle)} <span class="text-indigo-300 text-[10px] ml-1">(Sesi Terkunci & Berantai)</span>`;
+
+            currentSceneTag.textContent = `SEGMEN #${imgObj.sceneNumber}`;
+            currentSceneTitle.textContent = imgObj.sceneTitle;
+            currentSceneDesc.textContent = imgObj.narrative;
+            imageRatioTag.textContent = appState.aspectRatio || "16:9";
+
+            btnDownloadJPG.disabled = false;
+            btnRegenerateCurrent.disabled = false;
+        }
+
+        btnRegenerateCurrent.addEventListener('click', () => {
+            const currentImg = appState.generatedImages.find(i => i.id === appState.activeImageId);
+            if (currentImg) {
+                generateImageForScene(currentImg.sceneIndex);
+            }
+        });
+
+        btnDownloadJPG.addEventListener('click', () => {
+            const currentImg = appState.generatedImages.find(i => i.id === appState.activeImageId);
+            if (!currentImg || !currentImg.dataUrl) {
+                showToast("Tidak ada gambar aktif untuk diunduh.", "error");
+                return;
+            }
+
+            const img = new Image();
+            img.crossOrigin = "anonymous";
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.naturalWidth || img.width;
+                canvas.height = img.naturalHeight || img.height;
+
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0);
+
+                const jpgDataUrl = canvas.toDataURL('image/jpeg', 0.95);
+
+                const rawTitle = currentImg.sceneTitle || `segmen-${currentImg.sceneNumber}`;
+                const sanitizedTitle = rawTitle.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-');
+                const filename = `StoryCanvas-Segmen${currentImg.sceneNumber}-${sanitizedTitle}.jpg`;
+
+                const downloadLink = document.createElement('a');
+                downloadLink.href = jpgDataUrl;
+                downloadLink.download = filename;
+                document.body.appendChild(downloadLink);
+                downloadLink.click();
+                document.body.removeChild(downloadLink);
+
+                showToast(`Gambar berhasil diunduh sebagai ${filename}`, "success");
+            };
+
+            img.onerror = () => {
+                showToast("Gagal memproses konversi ke format JPG.", "error");
+            };
+
+            img.src = currentImg.dataUrl;
+        });
+
+        window.addEventListener('load', () => {
+            console.log("StoryCanvas Locked-Session Continuity App Loaded Successfully.");
+        });
+    </script>
+</body>
+</html>
