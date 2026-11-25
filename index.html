@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>StoryCanvas - AI Story Image Generator</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎨</text></svg>">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -140,6 +141,15 @@
                         </div>
                     </div>
 
+                    <!-- Pilihan Model Gambar (Untuk mengantisipasi limit 429 pada model tertentu) -->
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Model Generator Gambar</label>
+                        <select id="imageModelSelect" class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+                            <option value="gemini-3.1-flash-image">Gemini 3.1 Flash Image (Kualitas Tinggi & Konsistensi Latar)</option>
+                            <option value="gemini-3.1-flash-lite-image">Gemini 3.1 Flash Lite Image (Cepat & Kuota Lebih Longgar)</option>
+                        </select>
+                    </div>
+
                     <!-- Toggle Konsistensi Visual Berantai -->
                     <div class="bg-indigo-950/40 border border-indigo-500/30 rounded-xl p-3 flex items-center justify-between">
                         <div class="pr-2">
@@ -256,6 +266,44 @@
                     <!-- Main Rendered Image HTML Element -->
                     <img id="mainImageDisplay" src="" alt="Cerita Visual" class="hidden max-h-[500px] w-full object-contain rounded-xl transition duration-300">
                     
+                    <!-- Floating Scene Badge on Image -->
+                    <div id="imageBadge" class="hidden absolute top-3 left-3 bg-slate-950/85 backdrop-blur-md border border-slate-700/80 px-3 py-1.5 rounded-lg text-xs font-medium text-white shadow-lg">
+                        <i class="fa-solid fa-sparkles text-amber-400 mr-1.5"></i>
+                        <span id="imageBadgeText">Segmen #1</span>
+                    </div>
+                </div>
+
+                <!-- Scene Narrative & Action Footer -->
+                <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-4 space-y-4">
+                    <div>
+                        <div class="flex items-center justify-between mb-1">
+                            <span id="currentSceneTag" class="text-[11px] font-bold uppercase tracking-wider text-indigo-400">DETAIL SEGMEN</span>
+                            <span id="imageRatioTag" class="text-[11px] text-slate-500 font-mono">16:9</span>
+                        </div>
+                        <h3 id="currentSceneTitle" class="text-sm font-semibold text-white">Pilih adegan untuk melihat deskripsi</h3>
+                        <p id="currentSceneDesc" class="text-xs text-slate-400 mt-1 leading-relaxed">
+                            Deskripsi segmen cerita akan muncul di sini beserta kontinuitas visual yang dikirimkan ke model AI.
+                        </p>
+                    </div>
+
+                    <div class="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-800/80">
+                        <button id="btnRegenerateCurrent" disabled class="px-4 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-slate-200 text-xs font-medium rounded-xl transition flex items-center space-x-2">
+                            <i class="fa-solid fa-rotate-right"></i>
+                            <span>Buat Ulang Gambar Ini</span>
+                        </button>
+
+                        <button id="btnDownloadJPG" disabled class="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-semibold rounded-xl shadow-lg shadow-emerald-600/20 transition flex items-center space-x-2">
+                            <i class="fa-solid fa-download"></i>
+                            <span>Unduh Gambar (.JPG)</span>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+    </main>
+
     <!-- Custom Confirmation Modal (Pengganti confirm() bawaan browser) -->
     <div id="resetConfirmModal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
         <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-sm w-full p-5 shadow-2xl">
@@ -320,6 +368,7 @@
         const storyTitleInput = document.getElementById('storyTitle');
         const artStyleSelect = document.getElementById('artStyle');
         const aspectRatioSelect = document.getElementById('aspectRatio');
+        const imageModelSelect = document.getElementById('imageModelSelect');
         const characterSpecsInput = document.getElementById('characterSpecs');
         const storyContentInput = document.getElementById('storyContent');
         const btnGenerateStory = document.getElementById('btnGenerateStory');
@@ -420,16 +469,8 @@
             renderSceneCards();
             showToast("Sesi baru dimulai! Latar dan spesifikasi karakter kini bersih.", "info");
         });
-
-        btnPresetStory.addEventListener('click', () => {
-            storyTitleInput.value = "Petualangan Kaelen & naga Kristal Skywing";
-            characterSpecsInput.value = "Kaelen: Pemuda 18 tahun, rambut perak ikal pendek, mata biru bersinar, memakai rompi kulit cokelat dan syal merah. Naga Skywing: Anak naga kecil bersisik kristal biru transparan, sayap bercahaya gading.";
-            storyContentInput.value = `Di sebuah kerajaan melayang bernama Aetheria, seorang penjelajah muda bernama Kaelen menemukan sebuah gua kuno yang memancarkan cahaya biru terang. Di dalam gua tersebut, Kaelen bertemu dengan Skywing, seekor anak naga bernapas kristal yang terluka akibat jebakan pemburu. Kaelen dengan lembut membalut luka naga itu menggunakan kain hangat miliknya. Sebagai rasa terima kasih, Skywing mengajak Kaelen terbang bersama melintasi awan keemasan saat matahari terbenam. Mereka terbang menembus langit senja hingga menemukan kota mitos yang tersembunyi di balik badai petir besar.`;
-            showToast("Contoh cerita mikro berhasil dimuat!", "info");
-        });
-
-        async function fetchGeminiWithBackoff(url, options, maxRetries = 3) {
-            let delay = 1000;
+        async function fetchGeminiWithBackoff(url, options, maxRetries = 4, onRetryStatus = null) {
+            let delay = 4000; // Mulai dari 4 detik agar kuota per-menit (RPM) sempat pulih
             for (let i = 0; i < maxRetries; i++) {
                 try {
                     const res = await fetch(url, options);
@@ -437,6 +478,13 @@
                         return await res.json();
                     }
                     if (res.status === 429 || res.status >= 500) {
+                        if (i === maxRetries - 1) {
+                            const errBody = await res.text();
+                            throw new Error(`API Error [${res.status}]: ${errBody}`);
+                        }
+                        if (onRetryStatus) {
+                            onRetryStatus(i + 1, maxRetries, Math.round(delay / 1000));
+                        }
                         await new Promise(resolve => setTimeout(resolve, delay));
                         delay *= 2;
                         continue;
@@ -449,6 +497,7 @@
                     delay *= 2;
                 }
             }
+            throw new Error("API Error: Permintaan gagal setelah beberapa kali percobaan.");
         }
 
         // Pemecah teks otomatis ~100 karakter secara lokal (Fallback jika dijalankan offline/tanpa API Key)
@@ -512,47 +561,132 @@
 
             try {
                 const activeKey = getEffectiveApiKey();
-                const systemPrompt = "Anda adalah sutradara storyboard profesional. Tugas Anda adalah memecah naskah cerita pengguna menjadi BANYAK segmen adegan mikro. Setiap segmen cerita naratifnya harus pendek sekitar 100 karakter saja (ringkas dan padat aksi per kalimat/adegan). Untuk setiap segmen, buatkan sceneNumber, sceneTitle pendek, narasi pendek (~100 karakter), dan visualPrompt mendalam dalam Bahasa Inggris (mencakup pencahayaan, posisi, latar belakang, dan detail fisik karakter agar tetap konsisten). Buat sebanyak mungkin adegan yang diperlukan agar cerita terurai dengan detail.";
+                const selectedModel = imageModelSelect ? imageModelSelect.value : 'gemini-3.1-flash-image';
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${activeKey}`;
+                
+                const parts = [];
 
-                let userPrompt = `Judul Cerita: "${title}".\nGaya Seni (STRICT LOCK): ${appState.artStyle}.\n`;
-                if (characterSpecs) {
-                    userPrompt += `Spesifikasi Karakter & Latar Konsisten (STRICT LOCK - Tidak boleh berubah di semua adegan): ${characterSpecs}\n`;
+                if (prevImgObj && prevImgObj.base64Data) {
+                    parts.push({
+                        text: `STRICT CONTINUITY REFERENCE: Maintain absolute consistency for the background environment, lighting, and character appearance from this reference image:`
+                    });
+                    parts.push({
+                        inlineData: {
+                            mimeType: prevImgObj.mimeType || 'image/png',
+                            data: prevImgObj.base64Data
+                        }
+                    });
+                    parts.push({
+                        text: `Now render the next micro scene while preserving the exact character and background theme: ${fullVisualPrompt}`
+                    });
+                } else {
+                    parts.push({ text: fullVisualPrompt });
                 }
-                userPrompt += `\nNaskah Cerita:\n${rawStory}`;
 
                 const payload = {
-                    contents: [{ parts: [{ text: userPrompt }] }],
-                    systemInstruction: { parts: [{ text: systemPrompt }] },
+                    contents: [{
+                        role: 'user',
+                        parts: parts
+                    }],
                     generationConfig: {
-                        responseMimeType: "application/json",
-                        responseSchema: {
-                            type: "OBJECT",
-                            properties: {
-                                scenes: {
-                                    type: "ARRAY",
-                                    items: {
-                                        type: "OBJECT",
-                                        properties: {
-                                            sceneNumber: { type: "INTEGER" },
-                                            sceneTitle: { type: "STRING" },
-                                            narrative: { type: "STRING" },
-                                            visualPrompt: { type: "STRING" }
-                                        },
-                                        required: ["sceneNumber", "sceneTitle", "narrative", "visualPrompt"]
-                                    }
-                                }
-                            },
-                            required: ["scenes"]
+                        responseModalities: ['IMAGE'],
+                        imageConfig: {
+                            aspectRatio: appState.aspectRatio || "16:9"
                         }
                     }
                 };
 
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${activeKey}`;
-                const responseData = await fetchGeminiWithBackoff(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
+                const result = await fetchGeminiWithBackoff(
+                    apiUrl,
+                    {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    },
+                    4,
+                    (attempt, max, waitSec) => {
+                        loadingText.textContent = `Limit Kuota API (429) - Menunggu ${waitSec} detik...`;
+                        loadingSubtext.textContent = `Mencoba ulang otomatis (${attempt}/${max}) setelah kuota per menit pulih.`;
+                    }
+                );
+
+                if (!result) {
+                    throw new Error("API Error [429]: Batas kuota permintaan gambar tercapai.");
+                }
+
+                const candidateParts = result?.candidates?.[0]?.content?.parts || [];
+                const imgPart = candidateParts.find(p => p.inlineData && p.inlineData.data) || candidateParts.find(p => p.inline_data && p.inline_data.data);
+                
+                const inlineData = imgPart ? (imgPart.inlineData || imgPart.inline_data) : null;
+
+                if (!inlineData || !inlineData.data) {
+                    throw new Error("Respon API tidak memiliki data gambar yang valid.");
+                }
+
+                const mimeType = inlineData.mimeType || inlineData.mime_type || 'image/png';
+                const base64Data = inlineData.data;
+                const dataUrl = `data:${mimeType};base64,${base64Data}`;
+
+                appState.generatedImages = appState.generatedImages.filter(img => img.sceneIndex !== sceneIndex);
+
+                const newImgObj = {
+                    id: 'img_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+                    sceneIndex: sceneIndex,
+                    sceneTitle: scene.sceneTitle,
+                    sceneNumber: scene.sceneNumber || (sceneIndex + 1),
+                    narrative: scene.narrative,
+                    visualPrompt: fullVisualPrompt,
+                    dataUrl: dataUrl,
+                    mimeType: mimeType,
+                    base64Data: base64Data,
+                    hasReference: !!prevImgObj,
+                    timestamp: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+                };
+
+                appState.generatedImages.push(newImgObj);
+                appState.generatedImages.sort((a, b) => a.sceneIndex - b.sceneIndex);
+                
+                updateDropdownMenu();
+                setActiveDisplayImage(newImgObj.id);
+                renderSceneCards();
+
+                showToast(`Gambar Segmen #${newImgObj.sceneNumber} berhasil dibuat dengan konsistensi sesi terkunci!`, "success");
+
+            } catch (error) {
+                console.error("Gagal menghasilkan gambar:", error);
+                if (error.message && error.message.includes("429")) {
+                    showToast("Kuota API Penuh (429): Tunggu sekitar 1 menit atau ganti ke model 'Gemini 3.1 Flash Lite Image' di panel kiri.", "error");
+                } else if (error.message && error.message.includes("403")) {
+                    showToast("Akses ditolak (403): Periksa kembali Gemini API Key Anda di bagian atas halaman.", "error");
+                } else {
+                    showToast("Gagal menghasilkan gambar. Silakan coba beberapa saat lagi.", "error");
+                }
+            } finally {
+                imageLoadingSpinner.classList.add('hidden');
+            }
+        }
+
+        btnGenerateAllImages.addEventListener('click', async () => {
+            if (appState.scenes.length === 0) return;
+
+            btnGenerateAllImages.disabled = true;
+            showToast(`Memulai pembuatan gambar berantai untuk ${appState.scenes.length} segmen mikro...`, "info");
+
+            for (let i = 0; i < appState.scenes.length; i++) {
+                await generateImageForScene(i);
+                // Beri jeda 4 detik antar gambar agar tidak terkena limit 429 (Too Many Requests)
+                if (i < appState.scenes.length - 1) {
+                    imageLoadingSpinner.classList.remove('hidden');
+                    loadingText.textContent = `Jeda Anti-Limit (4 detik)...`;
+                    loadingSubtext.textContent = `Menyiapkan Segmen #${i + 2} dari ${appState.scenes.length} agar tidak terkena limit API.`;
+                    await new Promise(resolve => setTimeout(resolve, 4000));
+                }
+            }
+
+            imageLoadingSpinner.classList.add('hidden');
+            btnGenerateAllImages.disabled = false;
+            showToast("Proses pembuatan seluruh gambar selesai!", "success");
+        });
 
                 const jsonText = responseData.candidates?.[0]?.content?.parts?.[0]?.text;
                 if (!jsonText) throw new Error("Format respon adegan mikro tidak valid dari API.");
