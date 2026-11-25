@@ -67,15 +67,30 @@
                 </div>
             </div>
             
-            <div class="flex items-center space-x-3">
+            <div class="flex items-center space-x-2 sm:space-x-3">
+                <!-- Input API Key opsional untuk penggunaan di luar Preview Canvas -->
+                <div class="hidden md:flex items-center bg-slate-950/80 border border-slate-700/80 rounded-lg px-2.5 py-1">
+                    <i class="fa-solid fa-key text-amber-400 text-xs mr-2"></i>
+                    <input type="password" id="customApiKeyInput" placeholder="Gemini API Key (Opsional)" 
+                        class="bg-transparent text-xs text-slate-200 placeholder-slate-500 focus:outline-none w-36" title="Isi jika dijalankan di luar preview Canvas (tersimpan otomatis di browser)">
+                </div>
+
                 <button id="btnResetAll" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-lg border border-slate-700 transition flex items-center gap-1.5" title="Mulai Sesi Baru / Reset Total">
                     <i class="fa-solid fa-arrows-rotate text-indigo-400"></i>
-                    <span>Reset Sesi Baru</span>
+                    <span>Reset Sesi</span>
                 </button>
                 <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                     <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1.5 animate-pulse"></span>
-                    Locked Session Active
+                    Locked Session
                 </span>
+            </div>
+        </div>
+        <!-- Mobile API Key Bar -->
+        <div class="md:hidden px-4 pb-2.5 flex items-center">
+            <div class="w-full flex items-center bg-slate-950/80 border border-slate-700/80 rounded-lg px-3 py-1.5">
+                <i class="fa-solid fa-key text-amber-400 text-xs mr-2"></i>
+                <input type="password" id="customApiKeyInputMobile" placeholder="Tempel Gemini API Key jika dijalankan lokal..." 
+                    class="bg-transparent text-xs text-slate-200 placeholder-slate-500 focus:outline-none w-full">
             </div>
         </div>
     </header>
@@ -241,57 +256,31 @@
                     <!-- Main Rendered Image HTML Element -->
                     <img id="mainImageDisplay" src="" alt="Cerita Visual" class="hidden max-h-[500px] w-full object-contain rounded-xl transition duration-300">
                     
-                    <!-- Image Badge Tag -->
-                    <div id="imageBadge" class="hidden absolute top-3 left-3 bg-slate-950/70 border border-slate-700/80 backdrop-blur-md px-3 py-1 rounded-full text-[11px] text-slate-200 font-medium">
-                        <i class="fa-solid fa-sparkles text-amber-400 mr-1.5"></i>
-                        <span id="imageBadgeText">Adegan 1</span>
-                    </div>
-                </div>
-
-                <!-- Active Scene Info & Action Bar -->
-                <div class="space-y-4 pt-2">
-                    <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5">
-                        <div class="flex items-start justify-between">
-                            <div>
-                                <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-400" id="currentSceneTag">Adegan Aktif</span>
-                                <h4 class="text-sm font-semibold text-white mt-0.5" id="currentSceneTitle">Pilih adegan untuk melihat deskripsi</h4>
-                            </div>
-                            <span class="text-[10px] px-2 py-0.5 bg-slate-800 rounded text-slate-400" id="imageRatioTag">16:9</span>
-                        </div>
-                        <p class="text-xs text-slate-300 mt-2 leading-relaxed" id="currentSceneDesc">
-                            Deskripsi segmen cerita akan muncul di sini beserta petunjuk visual (*prompt*) yang dikirimkan ke model AI.
-                        </p>
-                    </div>
-
-                    <!-- Primary Action Buttons (Download JPG, Regenerate) -->
-                    <div class="flex flex-wrap items-center justify-between gap-3">
-                        <div class="flex items-center space-x-2">
-                            <button id="btnRegenerateCurrent" disabled class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center space-x-1.5">
-                                <i class="fa-solid fa-rotate text-indigo-400"></i>
-                                <span>Buat Variasi Baru</span>
-                            </button>
-                        </div>
-
-                        <!-- Mandatory JPG Download Button -->
-                        <button id="btnDownloadJPG" disabled class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-emerald-600/30 disabled:opacity-40 disabled:cursor-not-allowed transition transform active:scale-95 flex items-center space-x-2">
-                            <i class="fa-solid fa-download text-sm"></i>
-                            <span>Unduh Gambar (.JPG)</span>
-                        </button>
-                    </div>
-                </div>
-
+    <!-- Custom Confirmation Modal (Pengganti confirm() bawaan browser) -->
+    <div id="resetConfirmModal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-sm w-full p-5 shadow-2xl">
+            <div class="flex items-center space-x-3 text-amber-400 mb-3">
+                <i class="fa-solid fa-triangle-exclamation text-xl"></i>
+                <h3 class="text-base font-bold text-white">Mulai Sesi Baru?</h3>
             </div>
-
-        </section>
-
-    </main>
+            <p class="text-xs text-slate-300 leading-relaxed mb-5">
+                Tindakan ini akan menghapus seluruh naskah cerita, kunci spesifikasi karakter, latar, dan daftar gambar saat ini. Lanjutkan?
+            </p>
+            <div class="flex justify-end space-x-2.5">
+                <button id="btnCancelReset" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl transition">Batal</button>
+                <button id="btnConfirmReset" class="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold rounded-xl transition">Ya, Reset Semua</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Toast Notification Container -->
     <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none"></div>
 
     <script>
+        const apiKey = ""; // Otomatis diisi oleh Canvas saat runtime jika kosong
+
         const appState = {
-            apiKey: "",
+            customKey: localStorage.getItem('storycanvas_gemini_key') || "",
             title: "",
             artStyle: "3D Digital Art Render, Unreal Engine 5 style, cinematic lighting",
             aspectRatio: "16:9",
@@ -301,6 +290,32 @@
             generatedImages: [],
             activeImageId: null
         };
+
+        function getEffectiveApiKey() {
+            return appState.customKey.trim() || apiKey;
+        }
+
+        const customApiKeyInput = document.getElementById('customApiKeyInput');
+        const customApiKeyInputMobile = document.getElementById('customApiKeyInputMobile');
+        
+        if (appState.customKey) {
+            if (customApiKeyInput) customApiKeyInput.value = appState.customKey;
+            if (customApiKeyInputMobile) customApiKeyInputMobile.value = appState.customKey;
+        }
+
+        function handleApiKeyChange(val) {
+            appState.customKey = val.trim();
+            localStorage.setItem('storycanvas_gemini_key', appState.customKey);
+            if (customApiKeyInput && customApiKeyInput.value !== val) customApiKeyInput.value = val;
+            if (customApiKeyInputMobile && customApiKeyInputMobile.value !== val) customApiKeyInputMobile.value = val;
+        }
+
+        if (customApiKeyInput) {
+            customApiKeyInput.addEventListener('input', (e) => handleApiKeyChange(e.target.value));
+        }
+        if (customApiKeyInputMobile) {
+            customApiKeyInputMobile.addEventListener('input', (e) => handleApiKeyChange(e.target.value));
+        }
 
         const storyTitleInput = document.getElementById('storyTitle');
         const artStyleSelect = document.getElementById('artStyle');
@@ -331,6 +346,9 @@
         const btnDownloadJPG = document.getElementById('btnDownloadJPG');
         const btnRegenerateCurrent = document.getElementById('btnRegenerateCurrent');
         const toastContainer = document.getElementById('toastContainer');
+        const resetConfirmModal = document.getElementById('resetConfirmModal');
+        const btnCancelReset = document.getElementById('btnCancelReset');
+        const btnConfirmReset = document.getElementById('btnConfirmReset');
 
         function escapeHtml(str) {
             if (!str) return '';
@@ -364,36 +382,43 @@
         }
 
         btnResetAll.addEventListener('click', () => {
-            if (confirm("Mulai sesi baru akan menghapus cerita, karakter, dan gambar saat ini. Lanjutkan?")) {
-                appState.title = "";
-                appState.characterSpecs = "";
-                appState.lockedSpecs = false;
-                appState.scenes = [];
-                appState.generatedImages = [];
-                appState.activeImageId = null;
+            resetConfirmModal.classList.remove('hidden');
+        });
 
-                storyTitleInput.value = "";
-                storyContentInput.value = "";
-                characterSpecsInput.value = "";
-                characterSpecsInput.disabled = false;
-                artStyleSelect.disabled = false;
+        btnCancelReset.addEventListener('click', () => {
+            resetConfirmModal.classList.add('hidden');
+        });
 
-                mainImageDisplay.src = "";
-                mainImageDisplay.classList.add('hidden');
-                imagePlaceholder.classList.remove('hidden');
-                imageBadge.classList.add('hidden');
+        btnConfirmReset.addEventListener('click', () => {
+            resetConfirmModal.classList.add('hidden');
+            appState.title = "";
+            appState.characterSpecs = "";
+            appState.lockedSpecs = false;
+            appState.scenes = [];
+            appState.generatedImages = [];
+            appState.activeImageId = null;
 
-                currentSceneTitle.textContent = "Pilih adegan untuk melihat deskripsi";
-                currentSceneDesc.textContent = "Deskripsi segmen cerita akan muncul di sini beserta petunjuk visual (*prompt*) yang dikirimkan ke model AI.";
-                
-                btnDownloadJPG.disabled = true;
-                btnRegenerateCurrent.disabled = true;
-                btnGenerateAllImages.disabled = true;
+            storyTitleInput.value = "";
+            storyContentInput.value = "";
+            characterSpecsInput.value = "";
+            characterSpecsInput.disabled = false;
+            artStyleSelect.disabled = false;
 
-                updateDropdownMenu();
-                renderSceneCards();
-                showToast("Sesi baru dimulai! Latar dan spesifikasi karakter kini bersih.", "info");
-            }
+            mainImageDisplay.src = "";
+            mainImageDisplay.classList.add('hidden');
+            imagePlaceholder.classList.remove('hidden');
+            imageBadge.classList.add('hidden');
+
+            currentSceneTitle.textContent = "Pilih adegan untuk melihat deskripsi";
+            currentSceneDesc.textContent = "Deskripsi segmen cerita akan muncul di sini beserta petunjuk visual (*prompt*) yang dikirimkan ke model AI.";
+            
+            btnDownloadJPG.disabled = true;
+            btnRegenerateCurrent.disabled = true;
+            btnGenerateAllImages.disabled = true;
+
+            updateDropdownMenu();
+            renderSceneCards();
+            showToast("Sesi baru dimulai! Latar dan spesifikasi karakter kini bersih.", "info");
         });
 
         btnPresetStory.addEventListener('click', () => {
@@ -426,6 +451,43 @@
             }
         }
 
+        // Pemecah teks otomatis ~100 karakter secara lokal (Fallback jika dijalankan offline/tanpa API Key)
+        function splitStoryLocallyIntoMicroScenes(text, charSpecs) {
+            const cleanText = text.replace(/\s+/g, ' ').trim();
+            const chunks = [];
+            let currentPos = 0;
+
+            while (currentPos < cleanText.length) {
+                let endPos = currentPos + 105;
+                if (endPos < cleanText.length) {
+                    const lastPeriod = cleanText.lastIndexOf('.', endPos);
+                    const lastComma = cleanText.lastIndexOf(',', endPos);
+                    const lastSpace = cleanText.lastIndexOf(' ', endPos);
+
+                    if (lastPeriod > currentPos + 45) {
+                        endPos = lastPeriod + 1;
+                    } else if (lastComma > currentPos + 55) {
+                        endPos = lastComma + 1;
+                    } else if (lastSpace > currentPos + 30) {
+                        endPos = lastSpace;
+                    }
+                } else {
+                    endPos = cleanText.length;
+                }
+
+                const sliceText = cleanText.slice(currentPos, endPos).trim();
+                if (sliceText) chunks.push(sliceText);
+                currentPos = endPos;
+            }
+
+            return chunks.map((chunk, idx) => ({
+                sceneNumber: idx + 1,
+                sceneTitle: `Adegan Mikro #${idx + 1}`,
+                narrative: chunk,
+                visualPrompt: `Cinematic illustration depicting the scene: "${chunk}". ${charSpecs ? 'Characters and setting: ' + charSpecs : ''}`
+            }));
+        }
+
         btnGenerateStory.addEventListener('click', async () => {
             const rawStory = storyContentInput.value.trim();
             const title = storyTitleInput.value.trim() || "Cerita Tanpa Judul";
@@ -449,6 +511,7 @@
             btnGenerateStory.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i><span>Memecah Cerita Menjadi Segmen Mikro (~100 Karakter)...</span>`;
 
             try {
+                const activeKey = getEffectiveApiKey();
                 const systemPrompt = "Anda adalah sutradara storyboard profesional. Tugas Anda adalah memecah naskah cerita pengguna menjadi BANYAK segmen adegan mikro. Setiap segmen cerita naratifnya harus pendek sekitar 100 karakter saja (ringkas dan padat aksi per kalimat/adegan). Untuk setiap segmen, buatkan sceneNumber, sceneTitle pendek, narasi pendek (~100 karakter), dan visualPrompt mendalam dalam Bahasa Inggris (mencakup pencahayaan, posisi, latar belakang, dan detail fisik karakter agar tetap konsisten). Buat sebanyak mungkin adegan yang diperlukan agar cerita terurai dengan detail.";
 
                 let userPrompt = `Judul Cerita: "${title}".\nGaya Seni (STRICT LOCK): ${appState.artStyle}.\n`;
@@ -484,7 +547,7 @@
                     }
                 };
 
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${appState.apiKey}`;
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${activeKey}`;
                 const responseData = await fetchGeminiWithBackoff(apiUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -502,8 +565,17 @@
                 showToast(`Berhasil mengunci sesi dan memecah cerita menjadi ${appState.scenes.length} segmen mikro!`, "success");
 
             } catch (error) {
-                console.error("Gagal memecah cerita mikro:", error);
-                showToast("Gagal memecah cerita. Silakan coba lagi.", "error");
+                console.warn("API Pemecah Cerita gagal (menggunakan pemecah mikro lokal):", error);
+                // Fallback otomatis ke pemecah ~100 karakter lokal jika API Key belum dimasukkan saat dibuka secara lokal
+                appState.scenes = splitStoryLocallyIntoMicroScenes(rawStory, characterSpecs);
+                renderSceneCards();
+                btnGenerateAllImages.disabled = appState.scenes.length === 0;
+                
+                if (error.message && error.message.includes("403")) {
+                    showToast(`Cerita dipecah menjadi ${appState.scenes.length} segmen lokal. Isi Gemini API Key di bagian atas untuk generate gambar.`, "info");
+                } else {
+                    showToast(`Cerita dipecah menjadi ${appState.scenes.length} segmen mikro!`, "success");
+                }
             } finally {
                 btnGenerateStory.disabled = false;
                 btnGenerateStory.innerHTML = `<i class="fa-solid fa-scissors"></i><span>Pecah Cerita Menjadi Banyak Adegan (~100 Karakter)</span>`;
@@ -588,7 +660,8 @@
             }
 
             try {
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image:generateContent?key=${appState.apiKey}`;
+                const activeKey = getEffectiveApiKey();
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image:generateContent?key=${activeKey}`;
                 
                 const parts = [];
 
@@ -668,7 +741,11 @@
 
             } catch (error) {
                 console.error("Gagal menghasilkan gambar:", error);
-                showToast("Gagal menghasilkan gambar. Coba tekan tombol lagi.", "error");
+                if (error.message && error.message.includes("403")) {
+                    showToast("Akses ditolak (403): Pastikan Anda memasukkan Gemini API Key di bagian atas halaman jika dijalankan di luar Canvas.", "error");
+                } else {
+                    showToast("Gagal menghasilkan gambar. Coba tekan tombol lagi.", "error");
+                }
             } finally {
                 imageLoadingSpinner.classList.add('hidden');
             }
