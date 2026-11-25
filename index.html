@@ -537,6 +537,17 @@
             }));
         }
 
+        btnPresetStory.addEventListener('click', () => {
+            if (appState.lockedSpecs) {
+                showToast("Sesi sedang terkunci. Klik 'Reset Sesi' di atas jika ingin mengganti cerita & karakter.", "info");
+                return;
+            }
+            storyTitleInput.value = "Penjaga Lembah Kristal";
+            characterSpecsInput.value = "Kaelen (Pemuda 18 tahun, rambut perak pendek, mata biru bercahaya, jubah petualang biru tua & rompi kulit), Skywing (Anak naga kecil bersisik kristal biru transparan dengan sayap berkilau), Latar: Lembah hutan kuno penuh pilar batu kristal bercahaya biru di bawah langit senja ungu.";
+            storyContentInput.value = "Kaelen melangkah perlahan memasuki lembah kristal yang berkilauan di bawah cahaya senja. Di bahunya, Skywing mengepakkan sayap mungilnya sambil menatap pilar batu biru raksasa. Tiba-tiba tanah bergetar pelan dan sebuah gerbang kuno terbuka di balik air terjun bercahaya. Kaelen menggenggam tongkat cahayanya erat-erat bersiap melangkah masuk bersama Skywing.";
+            showToast("Contoh cerita & spesifikasi karakter berhasil dimuat!", "info");
+        });
+
         btnGenerateStory.addEventListener('click', async () => {
             const rawStory = storyContentInput.value.trim();
             const title = storyTitleInput.value.trim() || "Cerita Tanpa Judul";
@@ -558,6 +569,157 @@
 
             btnGenerateStory.disabled = true;
             btnGenerateStory.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i><span>Memecah Cerita Menjadi Segmen Mikro (~100 Karakter)...</span>`;
+
+            try {
+                const activeKey = getEffectiveApiKey();
+                if (!activeKey) {
+                    throw new Error("NO_LOCAL_KEY");
+                }
+
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${activeKey}`;
+                const systemPrompt = `Anda adalah sutradara storyboard profesional. Pecah naskah cerita berikut menjadi BANYAK segmen adegan mikro berurutan. Setiap segmen WAJIB memiliki panjang narasi sekitar 80 hingga 120 karakter saja agar menghasilkan banyak potongan gambar yang detail dan berkesinambungan. Pertahankan konsistensi tokoh & latar dari spesifikasi karakter berikut: "${characterSpecs}".`;
+
+                const payload = {
+                    contents: [{
+                        role: 'user',
+                        parts: [{ text: `Judul: ${title}\nNaskah Cerita:\n${rawStory}` }]
+                    }],
+                    systemInstruction: {
+                        parts: [{ text: systemPrompt }]
+                    },
+                    generationConfig: {
+                        responseMimeType: "application/json",
+                        responseSchema: {
+                            type: "OBJECT",
+                            properties: {
+                                scenes: {
+                                    type: "ARRAY",
+                                    items: {
+                                        type: "OBJECT",
+                                        properties: {
+                                            sceneNumber: { type: "INTEGER" },
+                                            sceneTitle: { type: "STRING" },
+                                            narrative: { type: "STRING" },
+                                            visualPrompt: { type: "STRING" }
+                                        },
+                                        required: ["sceneNumber", "sceneTitle", "narrative", "visualPrompt"]
+                                    }
+                                }
+                            },
+                            required: ["scenes"]
+                        }
+                    }
+                };
+
+                const responseData = await fetchGeminiWithBackoff(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const jsonText = responseData?.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (!jsonText) throw new Error("Format respon adegan mikro tidak valid dari API.");
+
+                const parsed = JSON.parse(jsonText);
+                appState.scenes = parsed.scenes || [];
+
+                renderSceneCards();
+                btnGenerateAllImages.disabled = appState.scenes.length === 0;
+                showToast(`Berhasil mengunci sesi dan memecah cerita menjadi ${appState.scenes.length} segmen mikro!`, "success");
+
+            } catch (error) {
+                console.warn("Menggunakan pemecah cerita mikro lokal:", error);
+                appState.scenes = splitStoryLocallyIntoMicroScenes(rawStory, characterSpecs);
+                renderSceneCards();
+                btnGenerateAllImages.disabled = appState.scenes.length === 0;
+                
+                if (error.message === "NO_LOCAL_KEY" || (error.message && error.message.includes("403"))) {
+                    showToast(`Cerita dipecah menjadi ${appState.scenes.length} segmen lokal (~100 karakter). Pastikan Gemini API Key terisi di atas untuk generate gambar.`, "info");
+                } else {
+                    showToast(`Cerita dipecah menjadi ${appState.scenes.length} segmen mikro!`, "success");
+                }
+            } finally {
+                btnGenerateStory.disabled = false;
+                btnGenerateStory.innerHTML = `<i class="fa-solid fa-scissors"></i><span>Pecah Cerita Menjadi Banyak Adegan (~100 Karakter)</span>`;
+            }
+        });
+
+        function renderSceneCards() {
+            sceneCountSpan.textContent = appState.scenes.length;
+            scenesContainer.innerHTML = '';
+
+            if (appState.scenes.length === 0) {
+                scenesContainer.innerHTML = `
+                    <div class="text-center py-12 px-4 border-2 border-dashed border-slate-800 rounded-xl">
+                        <i class="fa-solid fa-clapperboard text-3xl text-slate-600 mb-2"></i>
+                        <p class="text-xs text-slate-400">Belum ada adegan. Masukkan cerita di atas lalu klik tombol pemecah mikro.</p>
+                    </div>`;
+                return;
+            }
+
+            appState.scenes.forEach((scene, idx) => {
+                const card = document.createElement('div');
+                card.className = "bg-slate-900/90 border border-slate-800 hover:border-slate-700 rounded-xl p-3.5 transition flex flex-col justify-between space-y-3";
+                
+                const existingImg = appState.generatedImages.find(img => img.sceneIndex === idx);
+                const statusBadge = existingImg 
+                    ? `<span class="px-2 py-0.5 rounded text-[10px] bg-emerald-500/20 text-emerald-300 font-medium"><i class="fa-solid fa-check mr-1"></i>Selesai</span>`
+                    : `<span class="px-2 py-0.5 rounded text-[10px] bg-slate-800 text-slate-400 font-medium">Belum Digambar</span>`;
+
+                card.innerHTML = `
+                    <div class="flex items-start justify-between gap-2">
+                        <div>
+                            <span class="text-[10px] font-bold text-indigo-400 uppercase tracking-wide">Segmen #${scene.sceneNumber || (idx + 1)}</span>
+                            <h4 class="text-xs font-semibold text-white mt-0.5">${escapeHtml(scene.sceneTitle)}</h4>
+                        </div>
+                        ${statusBadge}
+                    </div>
+                    <p class="text-[11px] text-slate-300 line-clamp-2 leading-relaxed">${escapeHtml(scene.narrative)}</p>
+                    <div class="flex items-center justify-between pt-1 border-t border-slate-800/80">
+                        <button type="button" data-scene-idx="${idx}" class="btn-gen-single px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium rounded-lg transition flex items-center space-x-1.5">
+                            <i class="fa-solid fa-wand-magic-sparkles text-[10px]"></i>
+                            <span>${existingImg ? 'Buat Ulang' : 'Generate Gambar'}</span>
+                        </button>
+                        ${existingImg ? `<button type="button" data-img-id="${existingImg.id}" class="btn-view-img text-[11px] text-indigo-300 hover:underline">Lihat Hasil</button>` : ''}
+                    </div>
+                `;
+                scenesContainer.appendChild(card);
+            });
+
+            document.querySelectorAll('.btn-gen-single').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const sceneIdx = parseInt(e.currentTarget.getAttribute('data-scene-idx'), 10);
+                    generateImageForScene(sceneIdx);
+                });
+            });
+
+            document.querySelectorAll('.btn-view-img').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const imgId = e.currentTarget.getAttribute('data-img-id');
+                    setActiveDisplayImage(imgId);
+                });
+            });
+        }
+
+        async function generateImageForScene(sceneIndex) {
+            const scene = appState.scenes[sceneIndex];
+            if (!scene) return;
+
+            let fullVisualPrompt = `${scene.visualPrompt}`;
+            if (appState.characterSpecs) {
+                fullVisualPrompt += `, STRICT CHARACTER & ENVIRONMENT LOCK (Must remain identical across all scenes): (${appState.characterSpecs})`;
+            }
+            fullVisualPrompt += `, in strict locked story style: ${appState.artStyle}, flawless character consistency, unwavering background continuity, high detail, masterpiece`;
+
+            imageLoadingSpinner.classList.remove('hidden');
+            loadingText.textContent = `Menggambar Segmen #${scene.sceneNumber || (sceneIndex + 1)}...`;
+            loadingSubtext.textContent = `"${scene.sceneTitle}"`;
+
+            let prevImgObj = null;
+            if (appState.generatedImages.length > 0) {
+                prevImgObj = appState.generatedImages.find(img => img.sceneIndex === sceneIndex - 1) 
+                          || appState.generatedImages[appState.generatedImages.length - 1];
+            }
 
             try {
                 const activeKey = getEffectiveApiKey();
@@ -674,7 +836,6 @@
 
             for (let i = 0; i < appState.scenes.length; i++) {
                 await generateImageForScene(i);
-                // Beri jeda 4 detik antar gambar agar tidak terkena limit 429 (Too Many Requests)
                 if (i < appState.scenes.length - 1) {
                     imageLoadingSpinner.classList.remove('hidden');
                     loadingText.textContent = `Jeda Anti-Limit (4 detik)...`;
@@ -686,217 +847,6 @@
             imageLoadingSpinner.classList.add('hidden');
             btnGenerateAllImages.disabled = false;
             showToast("Proses pembuatan seluruh gambar selesai!", "success");
-        });
-
-                const jsonText = responseData.candidates?.[0]?.content?.parts?.[0]?.text;
-                if (!jsonText) throw new Error("Format respon adegan mikro tidak valid dari API.");
-
-                const parsed = JSON.parse(jsonText);
-                appState.scenes = parsed.scenes || [];
-
-                renderSceneCards();
-                btnGenerateAllImages.disabled = appState.scenes.length === 0;
-                showToast(`Berhasil mengunci sesi dan memecah cerita menjadi ${appState.scenes.length} segmen mikro!`, "success");
-
-            } catch (error) {
-                console.warn("API Pemecah Cerita gagal (menggunakan pemecah mikro lokal):", error);
-                // Fallback otomatis ke pemecah ~100 karakter lokal jika API Key belum dimasukkan saat dibuka secara lokal
-                appState.scenes = splitStoryLocallyIntoMicroScenes(rawStory, characterSpecs);
-                renderSceneCards();
-                btnGenerateAllImages.disabled = appState.scenes.length === 0;
-                
-                if (error.message && error.message.includes("403")) {
-                    showToast(`Cerita dipecah menjadi ${appState.scenes.length} segmen lokal. Isi Gemini API Key di bagian atas untuk generate gambar.`, "info");
-                } else {
-                    showToast(`Cerita dipecah menjadi ${appState.scenes.length} segmen mikro!`, "success");
-                }
-            } finally {
-                btnGenerateStory.disabled = false;
-                btnGenerateStory.innerHTML = `<i class="fa-solid fa-scissors"></i><span>Pecah Cerita Menjadi Banyak Adegan (~100 Karakter)</span>`;
-            }
-        });
-
-        function renderSceneCards() {
-            sceneCountSpan.textContent = appState.scenes.length;
-            scenesContainer.innerHTML = '';
-
-            if (appState.scenes.length === 0) {
-                scenesContainer.innerHTML = `
-                    <div class="text-center py-12 px-4 border-2 border-dashed border-slate-800 rounded-xl">
-                        <i class="fa-solid fa-clapperboard text-3xl text-slate-600 mb-2"></i>
-                        <p class="text-xs text-slate-400">Belum ada adegan. Masukkan cerita di atas lalu klik tombol pemecah mikro.</p>
-                    </div>`;
-                return;
-            }
-
-            appState.scenes.forEach((scene, idx) => {
-                const card = document.createElement('div');
-                card.className = "bg-slate-900/90 border border-slate-800 hover:border-slate-700 rounded-xl p-3.5 transition flex flex-col justify-between space-y-3";
-                
-                const existingImg = appState.generatedImages.find(img => img.sceneIndex === idx);
-                const statusBadge = existingImg 
-                    ? `<span class="px-2 py-0.5 rounded text-[10px] bg-emerald-500/20 text-emerald-300 font-medium"><i class="fa-solid fa-check mr-1"></i>Selesai</span>`
-                    : `<span class="px-2 py-0.5 rounded text-[10px] bg-slate-800 text-slate-400 font-medium">Belum Digambar</span>`;
-
-                card.innerHTML = `
-                    <div class="flex items-start justify-between gap-2">
-                        <div>
-                            <span class="text-[10px] font-bold text-indigo-400 uppercase tracking-wide">Segmen #${scene.sceneNumber || (idx + 1)}</span>
-                            <h4 class="text-xs font-semibold text-white mt-0.5">${escapeHtml(scene.sceneTitle)}</h4>
-                        </div>
-                        ${statusBadge}
-                    </div>
-                    <p class="text-[11px] text-slate-300 line-clamp-2 leading-relaxed">${escapeHtml(scene.narrative)}</p>
-                    <div class="flex items-center justify-between pt-1 border-t border-slate-800/80">
-                        <button type="button" data-scene-idx="${idx}" class="btn-gen-single px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium rounded-lg transition flex items-center space-x-1.5">
-                            <i class="fa-solid fa-wand-magic-sparkles text-[10px]"></i>
-                            <span>${existingImg ? 'Buat Ulang' : 'Generate Gambar'}</span>
-                        </button>
-                        ${existingImg ? `<button type="button" data-img-id="${existingImg.id}" class="btn-view-img text-[11px] text-indigo-300 hover:underline">Lihat Hasil</button>` : ''}
-                    </div>
-                `;
-                scenesContainer.appendChild(card);
-            });
-
-            document.querySelectorAll('.btn-gen-single').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    const sceneIdx = parseInt(e.currentTarget.getAttribute('data-scene-idx'), 10);
-                    generateImageForScene(sceneIdx);
-                });
-            });
-
-            document.querySelectorAll('.btn-view-img').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    const imgId = e.currentTarget.getAttribute('data-img-id');
-                    setActiveDisplayImage(imgId);
-                });
-            });
-        }
-
-        async function generateImageForScene(sceneIndex) {
-            const scene = appState.scenes[sceneIndex];
-            if (!scene) return;
-
-            let fullVisualPrompt = `${scene.visualPrompt}`;
-            if (appState.characterSpecs) {
-                fullVisualPrompt += `, STRICT CHARACTER & ENVIRONMENT LOCK (Must remain identical across all scenes): (${appState.characterSpecs})`;
-            }
-            fullVisualPrompt += `, in strict locked story style: ${appState.artStyle}, flawless character consistency, unwavering background continuity, high detail, masterpiece`;
-
-            imageLoadingSpinner.classList.remove('hidden');
-            loadingText.textContent = `Menggambar Segmen #${scene.sceneNumber || (sceneIndex + 1)}...`;
-            loadingSubtext.textContent = `"${scene.sceneTitle}"`;
-
-            let prevImgObj = null;
-            if (appState.generatedImages.length > 0) {
-                prevImgObj = appState.generatedImages.find(img => img.sceneIndex === sceneIndex - 1) 
-                          || appState.generatedImages[appState.generatedImages.length - 1];
-            }
-
-            try {
-                const activeKey = getEffectiveApiKey();
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image:generateContent?key=${activeKey}`;
-                
-                const parts = [];
-
-                if (prevImgObj && prevImgObj.base64Data) {
-                    parts.push({
-                        text: `STRICT CONTINUITY REFERENCE: Maintain absolute consistency for the background environment, lighting, and character appearance from this reference image:`
-                    });
-                    parts.push({
-                        inlineData: {
-                            mimeType: prevImgObj.mimeType || 'image/png',
-                            data: prevImgObj.base64Data
-                        }
-                    });
-                    parts.push({
-                        text: `Now render the next micro scene while preserving the exact character and background theme: ${fullVisualPrompt}`
-                    });
-                } else {
-                    parts.push({ text: fullVisualPrompt });
-                }
-
-                const payload = {
-                    contents: [{
-                        role: 'user',
-                        parts: parts
-                    }],
-                    generationConfig: {
-                        responseModalities: ['IMAGE'],
-                        imageConfig: {
-                            aspectRatio: appState.aspectRatio || "16:9"
-                        }
-                    }
-                };
-
-                const result = await fetchGeminiWithBackoff(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                const candidateParts = result?.candidates?.[0]?.content?.parts || [];
-                const imgPart = candidateParts.find(p => p.inlineData && p.inlineData.data) || candidateParts.find(p => p.inline_data && p.inline_data.data);
-                
-                const inlineData = imgPart ? (imgPart.inlineData || imgPart.inline_data) : null;
-
-                if (!inlineData || !inlineData.data) {
-                    throw new Error("Respon API tidak memiliki data gambar yang valid.");
-                }
-
-                const mimeType = inlineData.mimeType || inlineData.mime_type || 'image/png';
-                const base64Data = inlineData.data;
-                const dataUrl = `data:${mimeType};base64,${base64Data}`;
-
-                appState.generatedImages = appState.generatedImages.filter(img => img.sceneIndex !== sceneIndex);
-
-                const newImgObj = {
-                    id: 'img_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
-                    sceneIndex: sceneIndex,
-                    sceneTitle: scene.sceneTitle,
-                    sceneNumber: scene.sceneNumber || (sceneIndex + 1),
-                    narrative: scene.narrative,
-                    visualPrompt: fullVisualPrompt,
-                    dataUrl: dataUrl,
-                    mimeType: mimeType,
-                    base64Data: base64Data,
-                    hasReference: !!prevImgObj,
-                    timestamp: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
-                };
-
-                appState.generatedImages.push(newImgObj);
-                appState.generatedImages.sort((a, b) => a.sceneIndex - b.sceneIndex);
-                
-                updateDropdownMenu();
-                setActiveDisplayImage(newImgObj.id);
-                renderSceneCards();
-
-                showToast(`Gambar Segmen #${newImgObj.sceneNumber} berhasil dibuat dengan konsistensi sesi terkunci!`, "success");
-
-            } catch (error) {
-                console.error("Gagal menghasilkan gambar:", error);
-                if (error.message && error.message.includes("403")) {
-                    showToast("Akses ditolak (403): Pastikan Anda memasukkan Gemini API Key di bagian atas halaman jika dijalankan di luar Canvas.", "error");
-                } else {
-                    showToast("Gagal menghasilkan gambar. Coba tekan tombol lagi.", "error");
-                }
-            } finally {
-                imageLoadingSpinner.classList.add('hidden');
-            }
-        }
-
-        btnGenerateAllImages.addEventListener('click', async () => {
-            if (appState.scenes.length === 0) return;
-
-            btnGenerateAllImages.disabled = true;
-            showToast(`Memulai pembuatan gambar berantai untuk ${appState.scenes.length} segmen mikro...`, "info");
-
-            for (let i = 0; i < appState.scenes.length; i++) {
-                await generateImageForScene(i);
-            }
-
-            btnGenerateAllImages.disabled = false;
-            showToast("Selesai menghasilkan seluruh gambar dengan konsistensi latar & tokoh terjaga!", "success");
         });
 
         function updateDropdownMenu() {
